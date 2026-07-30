@@ -1,0 +1,11 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true
+  },
+  // The Supabase function is Deno code, not app code. It runs on a server with
+  // completely different globals (Deno, npm: imports), so checking it with the
+  // app's TypeScript setup reports errors that are not real problems.
+  // Deno type-checks that file itself when we deploy it.
+  "exclude": ["node_modules", "supabase/functions"]
+}
