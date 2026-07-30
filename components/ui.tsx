@@ -363,6 +363,69 @@ export function Segmented<T extends string>({
   );
 }
 
+/** How far through the quiz you are. */
+export function Progress({ step, total }: { step: number; total: number }) {
+  const c = useTheme();
+  const pct = Math.max(0, Math.min(1, step / total));
+  return (
+    <View style={{ gap: space.sm }}>
+      <View style={{ height: 6, backgroundColor: c.surfaceAlt, borderRadius: radius.pill }}>
+        <View
+          style={{
+            height: 6,
+            width: `${pct * 100}%`,
+            backgroundColor: c.primary,
+            borderRadius: radius.pill,
+          }}
+        />
+      </View>
+      <Text style={[font.label, { color: c.textMuted }]}>
+        Question {step} of {total}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * A big tappable answer for the quiz. Made deliberately large — on a phone you
+ * are tapping this with a thumb, not clicking it with a mouse.
+ */
+export function Choice({
+  label,
+  blurb,
+  selected,
+  onPress,
+}: {
+  label: string;
+  blurb?: string;
+  selected?: boolean;
+  onPress: () => void;
+}) {
+  const c = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        backgroundColor: selected ? c.primarySoft : c.surface,
+        borderColor: selected ? c.primary : c.border,
+        borderWidth: 2,
+        borderRadius: radius.lg,
+        padding: space.lg,
+        gap: space.xs,
+        opacity: pressed ? 0.75 : 1,
+      })}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+        <Text style={[font.subheading, { color: c.text, flex: 1 }]}>{label}</Text>
+        {selected ? (
+          <Text style={{ color: c.primary, fontWeight: '800', fontSize: 18 }}>✓</Text>
+        ) : null}
+      </View>
+      {blurb ? <Text style={[font.small, { color: c.textMuted }]}>{blurb}</Text> : null}
+    </Pressable>
+  );
+}
+
 /**
  * An inline message, shown right in the screen rather than as a popup.
  *
