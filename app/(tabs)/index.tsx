@@ -12,7 +12,7 @@
  */
 
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { Link, router } from 'expo-router';
 import {
   Body,
@@ -34,6 +34,7 @@ import {
 } from '../../components/ui';
 import { useStore } from '../../lib/store';
 import { supabase } from '../../lib/supabase';
+import { notify } from '../../lib/alert';
 import { useAsync } from '../../lib/use-async';
 import {
   ROLE_LABEL,
@@ -128,10 +129,10 @@ function OwnerHome({ data, reload }: { data: any; reload: () => Promise<void> })
         body: { family_id: family!.id, week_start: weekStartFor(new Date()) },
       });
       if (error) throw error;
-      Alert.alert('Plan ready! 🍽️', 'Check the Meal Plan tab.');
+      notify('Plan ready! 🍽️', 'Check the Meal Plan tab.');
       router.push('/(tabs)/plan');
     } catch (e: any) {
-      Alert.alert(
+      notify(
         'Could not make the plan',
         `${e?.message ?? 'Unknown error'}\n\nIf you have not deployed the AI function yet, see SETUP.md step 5.`
       );
@@ -304,9 +305,9 @@ function MemberHome({ data, reload }: { data: any; reload: () => Promise<void> }
       setIdea('');
       setWhy('');
       await reload();
-      Alert.alert('Sent! 🙌', 'Your idea is with the grown-ups.');
+      notify('Sent! 🙌', 'Your idea is with the grown-ups.');
     } catch (e: any) {
-      Alert.alert('Could not send that', e.message);
+      notify('Could not send that', e.message);
     } finally {
       setSending(false);
     }

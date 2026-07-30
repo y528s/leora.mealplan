@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import {
   Body,
   Button,

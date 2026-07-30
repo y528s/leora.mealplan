@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import {
   Body,
   Button,
@@ -29,6 +29,7 @@ import {
 } from '../../components/ui';
 import { useStore } from '../../lib/store';
 import { supabase } from '../../lib/supabase';
+import { confirmAction, notify } from '../../lib/alert';
 import { useAsync } from '../../lib/use-async';
 import { canApprove, type ShoppingItem, type FamilyMember } from '../../lib/types';
 import { space } from '../../lib/theme';
@@ -78,7 +79,7 @@ export default function ShoppingList() {
       setQty('');
       await reload();
     } catch (e: any) {
-      Alert.alert('Could not add that', e.message);
+      notify('Could not add that', e.message);
     } finally {
       setAdding(false);
     }
@@ -93,7 +94,7 @@ export default function ShoppingList() {
       if (error) throw error;
       await reload();
     } catch (e: any) {
-      Alert.alert('Could not update that', e.message);
+      notify('Could not update that', e.message);
     }
   }
 
@@ -103,7 +104,7 @@ export default function ShoppingList() {
       if (error) throw error;
       await reload();
     } catch (e: any) {
-      Alert.alert('Could not delete that', e.message);
+      notify('Could not delete that', e.message);
     }
   }
 
@@ -224,23 +225,21 @@ export default function ShoppingList() {
               iCanApprove ? (
                 <Chip
                   label="Clear"
-                  onPress={() =>
-                    Alert.alert('Clear bought items?', 'This removes them from the list.', [
-                      { text: 'Cancel', style: 'cancel' },
-                      {
-                        text: 'Clear',
-                        style: 'destructive',
-                        onPress: async () => {
-                          await supabase
-                            .from('shopping_items')
-                            .delete()
-                            .eq('family_id', family!.id)
-                            .eq('status', 'bought');
-                          reload();
-                        },
-                      },
-                    ])
-                  }
+                  onPress={async () => {
+                    const yes = await confirmAction({
+                      title: 'Clear bought items?',
+                      message: 'This removes them from the list.',
+                      confirmLabel: 'Clear',
+                      destructive: true,
+                    });
+                    if (!yes) return;
+                    await supabase
+                      .from('shopping_items')
+                      .delete()
+                      .eq('family_id', family!.id)
+                      .eq('status', 'bought');
+                    reload();
+                  }}
                 />
               ) : undefined
             }

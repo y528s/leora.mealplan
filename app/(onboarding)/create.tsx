@@ -14,7 +14,7 @@
  */
 
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { router } from 'expo-router';
 import {
   Body,
@@ -34,6 +34,7 @@ import {
   useTheme,
 } from '../../components/ui';
 import { supabase } from '../../lib/supabase';
+import { notify } from '../../lib/alert';
 import { useStore } from '../../lib/store';
 import {
   DIAL_LEVELS,
@@ -100,11 +101,11 @@ export default function CreateFamily() {
 
   async function create() {
     if (!familyName.trim()) {
-      Alert.alert('Almost', 'What should we call your family?');
+      notify('Almost', 'What should we call your family?');
       return;
     }
     if (!myName.trim()) {
-      Alert.alert('Almost', 'What should we call you?');
+      notify('Almost', 'What should we call you?');
       return;
     }
 
@@ -131,7 +132,7 @@ export default function CreateFamily() {
       await refresh();
       router.replace('/(tabs)');
     } catch (e: any) {
-      Alert.alert('Could not create your family', e?.message ?? 'Please try again.');
+      notify('Could not create your family', e?.message ?? 'Please try again.');
     } finally {
       setBusy(false);
     }

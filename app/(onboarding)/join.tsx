@@ -7,10 +7,10 @@
  */
 
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Body, Button, Card, Field, Screen, Small, Title } from '../../components/ui';
 import { supabase } from '../../lib/supabase';
+import { notify } from '../../lib/alert';
 import { useStore } from '../../lib/store';
 
 export default function JoinFamily() {
@@ -21,7 +21,7 @@ export default function JoinFamily() {
 
   async function join() {
     if (!code.trim() || !name.trim()) {
-      Alert.alert('Almost', 'We need the code and your name.');
+      notify('Almost', 'We need the code and your name.');
       return;
     }
     setBusy(true);
@@ -34,7 +34,7 @@ export default function JoinFamily() {
       await refresh();
       router.replace('/(tabs)');
     } catch (e: any) {
-      Alert.alert('Could not join', e?.message ?? 'Check the code and try again.');
+      notify('Could not join', e?.message ?? 'Check the code and try again.');
     } finally {
       setBusy(false);
     }

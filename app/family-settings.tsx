@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import { router } from 'expo-router';
 import {
   Body,
@@ -27,6 +27,7 @@ import {
 } from '../components/ui';
 import { useStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
+import { notify } from '../lib/alert';
 import {
   DIAL_LEVELS,
   FOOD_DIALS,
@@ -101,9 +102,9 @@ export default function FamilySettings() {
 
       await refresh();
       setDirty(false);
-      Alert.alert('Saved ✓', 'The next meal plan will use these rules.');
+      notify('Saved ✓', 'The next meal plan will use these rules.');
     } catch (e: any) {
-      Alert.alert('Could not save', e.message);
+      notify('Could not save', e.message);
     } finally {
       setSaving(false);
     }

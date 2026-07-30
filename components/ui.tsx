@@ -363,6 +363,49 @@ export function Segmented<T extends string>({
   );
 }
 
+/**
+ * An inline message, shown right in the screen rather than as a popup.
+ *
+ * Better than a popup for form errors: it stays on screen while you fix the
+ * problem, instead of vanishing the moment you tap OK.
+ */
+export function Banner({
+  tone,
+  title,
+  body,
+}: {
+  tone: 'error' | 'success' | 'info';
+  title: string;
+  body?: string;
+}) {
+  const c = useTheme();
+  const looks = {
+    error: { bg: c.dangerSoft, fg: c.danger, emoji: '⚠️' },
+    success: { bg: c.successSoft, fg: c.success, emoji: '✓' },
+    info: { bg: c.warningSoft, fg: c.warning, emoji: '📬' },
+  } as const;
+  const l = looks[tone];
+
+  return (
+    <View
+      style={{
+        backgroundColor: l.bg,
+        borderRadius: radius.md,
+        padding: space.md,
+        flexDirection: 'row',
+        gap: space.sm,
+        alignItems: 'flex-start',
+      }}
+    >
+      <Text style={{ fontSize: 16 }}>{l.emoji}</Text>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[font.small, { color: l.fg, fontWeight: '700' }]}>{title}</Text>
+        {body ? <Text style={[font.small, { color: l.fg }]}>{body}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
 /** Shown when a list is empty, so the screen never looks broken. */
 export function Empty({ emoji, title, body }: { emoji: string; title: string; body?: string }) {
   const c = useTheme();

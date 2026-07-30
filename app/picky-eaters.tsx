@@ -16,7 +16,7 @@
  */
 
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 import {
   Body,
   Button,
@@ -38,6 +38,7 @@ import {
 } from '../components/ui';
 import { useStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
+import { notify } from '../lib/alert';
 import { useAsync } from '../lib/use-async';
 import { canApprove, type FoodRestriction, type RestrictionKind } from '../lib/types';
 import { space } from '../lib/theme';
@@ -88,9 +89,9 @@ export default function PickyEaters() {
     } catch (e: any) {
       // A duplicate is not really an error worth shouting about.
       if (String(e.message).includes('duplicate')) {
-        Alert.alert('Already there', `${name} is already on that list.`);
+        notify('Already there', `${name} is already on that list.`);
       } else {
-        Alert.alert('Could not add that', e.message);
+        notify('Could not add that', e.message);
       }
     } finally {
       setBusy(false);
@@ -103,7 +104,7 @@ export default function PickyEaters() {
       if (error) throw error;
       await reload();
     } catch (e: any) {
-      Alert.alert('Could not remove that', e.message);
+      notify('Could not remove that', e.message);
     }
   }
 
