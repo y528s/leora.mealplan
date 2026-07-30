@@ -1,40 +1,48 @@
 /**
- * You are signed in but you are not in a family yet. Two ways forward:
- * start one, or join one somebody else started.
+ * THE FORK IN THE ROAD
+ *
+ * You are signed in but not in a family yet, so there are exactly two things
+ * you can possibly want. Two choices, nothing else on the screen.
+ *
+ * You only ever see this once: as soon as you belong to a family, the router
+ * (app/index.tsx) sends you straight to the app and never comes back here.
  */
 
 import { router } from 'expo-router';
-import { Body, Button, Card, Heading, Screen, Small, Title } from '../../components/ui';
+import { View } from 'react-native';
+import { Body, Card, Choice, Screen, Small, Title, Button, useTheme } from '../../components/ui';
 import { useStore } from '../../lib/store';
+import { space } from '../../lib/theme';
 
 export default function Start() {
+  const c = useTheme();
   const { signOut } = useStore();
 
   return (
     <Screen>
-      <Title sub="Are you setting this up for your family, or joining one?">
-        Welcome! 🍜
-      </Title>
+      <View style={{ height: space.lg }} />
+      <Body style={{ fontSize: 48 }}>🍜</Body>
+      <Title sub="Two ways in. Which one are you?">Welcome!</Title>
 
-      <Card onPress={() => router.push('/(onboarding)/create')}>
-        <Heading>I'm setting it up</Heading>
-        <Body muted>
-          You'll answer a few questions about how your family shops and eats. You become the owner,
-          which means you approve grocery requests and control the food rules.
-        </Body>
-        <Button title="Create our family" onPress={() => router.push('/(onboarding)/create')} />
-      </Card>
+      <View style={{ gap: space.lg }}>
+        <Choice
+          label="① Create a family"
+          blurb="Nobody has set this up yet and you are doing it. You answer a short quiz about how your family shops and eats, and you become the owner — you approve who joins, and you set the food rules."
+          onPress={() => router.push('/(onboarding)/create')}
+        />
 
-      <Card onPress={() => router.push('/(onboarding)/join')}>
-        <Heading>I'm joining</Heading>
-        <Body muted>
-          Somebody in your family already made one. You need the invite code they'll give you.
-        </Body>
-        <Button
-          variant="secondary"
-          title="I have a code"
+        <Choice
+          label="② Join a family"
+          blurb="Somebody already made one and gave you an invite code. You type the code, then a parent has to let you in before you can see anything."
           onPress={() => router.push('/(onboarding)/join')}
         />
+      </View>
+
+      <Card>
+        <Small>
+          Not sure? If you are the parent doing the food shopping, you want ①. If somebody handed
+          you a code like SUSHI-4821, you want ②.
+        </Small>
       </Card>
 
       <Button title="Sign out" variant="ghost" onPress={signOut} />

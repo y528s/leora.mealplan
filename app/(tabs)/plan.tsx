@@ -41,6 +41,38 @@ import {
 import { KASHRUT_CATEGORIES } from '../../lib/food-rules';
 import { space } from '../../lib/theme';
 
+/**
+ * Sort a meal's ingredients into shop sections, and put the sections in the
+ * order you actually walk a supermarket — produce at the door, frozen at the
+ * end. A list in recipe order makes you criss-cross the shop.
+ */
+const AISLE_ORDER = [
+  'Produce',
+  'Bakery',
+  'Meat & Fish',
+  'Dairy',
+  'Pantry',
+  'Spices',
+  'Frozen',
+  'Other',
+];
+
+function groupByAisle(ingredients: Meal['ingredients']): [string, Meal['ingredients']][] {
+  const groups = new Map<string, Meal['ingredients']>();
+  for (const ing of ingredients ?? []) {
+    const aisle = ing.category?.trim() || 'Other';
+    const list = groups.get(aisle) ?? [];
+    list.push(ing);
+    groups.set(aisle, list);
+  }
+  // Known aisles first in walking order, anything unexpected after.
+  return [...groups.entries()].sort(([a], [b]) => {
+    const ia = AISLE_ORDER.indexOf(a);
+    const ib = AISLE_ORDER.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+}
+
 export default function PlanScreen() {
   const c = useTheme();
   const { family, role } = useStore();
@@ -203,22 +235,38 @@ export default function PlanScreen() {
                         {meal.est_cost_cents ? <Chip label={formatMoney(meal.est_cost_cents)} /> : null}
                       </ChipRow>
 
-                      {/* Recipe only appears when you tap — keeps the week scannable. */}
+                      {/* WHAT YOU NEED — always visible, never hidden behind a tap.
+                          This is the thing people actually look at while
+                          standing in a shop, so it should not require a click.
+                          Grouped by aisle so you are not zig-zagging around
+                          the shop reading a jumbled list. */}
+                      <Divider />
+                      <Label>🧺 What you need</Label>
+                      <View style={{ gap: space.md }}>
+                        {groupByAisle(meal.ingredients).map(([aisle, items]) => (
+                          <View key={aisle} style={{ gap: space.xs }}>
+                            <Small muted={false}>
+                              <Body style={{ fontWeight: '700', color: c.primary }}>{aisle}</Body>
+                            </Small>
+                            {items.map((ing, i) => (
+                              <Row key={i} style={{ justifyContent: 'space-between', gap: space.md }}>
+                                <Body style={{ flex: 1 }}>· {ing.name}</Body>
+                                <Body muted>{ing.quantity}</Body>
+                              </Row>
+                            ))}
+                          </View>
+                        ))}
+                        {meal.ingredients.length === 0 ? (
+                          <Small>No ingredients listed for this meal.</Small>
+                        ) : null}
+                      </View>
+
+                      {/* The cooking steps are the long part, so those stay
+                          behind the tap — otherwise one day fills the screen. */}
                       {isOpen ? (
                         <>
                           <Divider />
-                          <Label>You need</Label>
-                          {meal.ingredients.map((ing, i) => (
-                            <Row key={i} style={{ justifyContent: 'space-between' }}>
-                              <Body muted style={{ flex: 1 }}>
-                                {ing.name}
-                              </Body>
-                              <Small>{ing.quantity}</Small>
-                            </Row>
-                          ))}
-
-                          <Divider />
-                          <Label>How to make it</Label>
+                          <Label>👩‍🍳 How to make it</Label>
                           {meal.instructions.map((step, i) => (
                             <Row key={i} style={{ alignItems: 'flex-start' }}>
                               <Body style={{ color: c.primary, fontWeight: '800', width: 22 }}>
@@ -230,7 +278,9 @@ export default function PlanScreen() {
                             </Row>
                           ))}
                         </>
-                      ) : null}
+                      ) : (
+                        <Small>Tap for the recipe steps</Small>
+                      )}
                     </Card>
                   );
                 })}

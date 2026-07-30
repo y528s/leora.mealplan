@@ -96,7 +96,7 @@ export default function HomeTab() {
 
 function OwnerHome({ data, reload }: { data: any; reload: () => Promise<void> }) {
   const c = useTheme();
-  const { family, me, members, role, signOut } = useStore();
+  const { family, me, members, role, refresh, signOut } = useStore();
   const [generating, setGenerating] = useState(false);
 
   const pendingItems: ShoppingItem[] = data?.pendingItems ?? [];
@@ -109,8 +109,31 @@ function OwnerHome({ data, reload }: { data: any; reload: () => Promise<void> })
     return members.find((m) => m.id === id)?.display_name ?? 'Someone';
   }
 
+  // Everyone who typed the code but has not been let in yet.
+  const waitingToJoin = members.filter((m) => m.status === 'pending');
+
   async function decide(s: Suggestion, status: 'accepted' | 'declined') {
     await supabase.from('meal_suggestions').update({ status }).eq('id', s.id);
+    await reload();
+  }
+
+  async function decideJoin(m: { id: string; display_name: string }, approve: boolean) {
+    // Goes through a database function rather than a plain update, so the
+    // "are you actually an owner?" check happens in the database and cannot be
+    // skipped by talking to it directly.
+    const { error } = await supabase.rpc('decide_join_request', {
+      p_member_id: m.id,
+      p_approve: approve,
+    });
+    if (error) {
+      notify('Could not do that', error.message);
+      return;
+    }
+    notify(
+      approve ? `${m.display_name} is in! 🎉` : `${m.display_name} was turned down`,
+      approve ? 'They can see the family now.' : undefined
+    );
+    await refresh();
     await reload();
   }
 
@@ -158,6 +181,32 @@ function OwnerHome({ data, reload }: { data: any; reload: () => Promise<void> })
           loading={generating}
         />
       </Card>
+
+      {/* ------------------------------------------------ people wanting in */}
+      {waitingToJoin.length > 0 ? (
+        <View style={{ gap: space.md }}>
+          <Heading right={<Chip label={`${waitingToJoin.length}`} tone="danger" />}>
+            Wants to join your family
+          </Heading>
+          {waitingToJoin.map((m) => (
+            <Card key={m.id}>
+              <View>
+                <Body style={{ fontWeight: '700' }}>{m.display_name}</Body>
+                <Small>Typed your invite code. They cannot see anything yet.</Small>
+              </View>
+              <Row>
+                <Button title="Let them in" onPress={() => decideJoin(m, true)} style={{ flex: 2 }} />
+                <Button
+                  title="No"
+                  variant="danger"
+                  onPress={() => decideJoin(m, false)}
+                  style={{ flex: 1 }}
+                />
+              </Row>
+            </Card>
+          ))}
+        </View>
+      ) : null}
 
       {/* ------------------------------------------------- things to approve */}
       {pendingItems.length > 0 ? (
@@ -251,7 +300,9 @@ function OwnerHome({ data, reload }: { data: any; reload: () => Promise<void> })
           <Small>Anybody who types this in joins your family.</Small>
         </Card>
 
-        {members.map((m) => (
+        {/* Anyone still waiting is shown in their own section above, so leave
+            them out here rather than listing them twice. */}
+        {members.filter((m) => m.status !== 'pending').map((m) => (
           <Card key={m.id}>
             <Row style={{ justifyContent: 'space-between' }}>
               <View>

@@ -61,6 +61,11 @@ export type FamilyMember = {
   role: Role;
   /** Rough guide for portion sizes — a teenager eats more than a toddler. */
   appetite: 'small' | 'normal' | 'big';
+  /**
+   * 'pending' means they typed the invite code but an owner has not let them
+   * in yet. The database refuses them everything until this is 'active'.
+   */
+  status: 'pending' | 'active';
   created_at: string;
 };
 

@@ -17,7 +17,7 @@ import { useStore } from '../lib/store';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 export default function Index() {
-  const { loading, session, family } = useStore();
+  const { loading, session, family, awaitingApproval } = useStore();
 
   if (!isSupabaseConfigured) return <Redirect href="/setup" />;
 
@@ -33,6 +33,10 @@ export default function Index() {
   }
 
   if (!session) return <Redirect href="/(auth)/sign-in" />;
+  // Check this BEFORE the no-family case. Somebody waiting to be approved has
+  // no family from the database's point of view, so without this they would be
+  // sent back to "create or join" and could join over and over forever.
+  if (awaitingApproval) return <Redirect href="/(onboarding)/waiting" />;
   if (!family) return <Redirect href="/(onboarding)/start" />;
   return <Redirect href="/(tabs)" />;
 }

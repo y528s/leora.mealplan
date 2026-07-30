@@ -32,7 +32,9 @@ export default function JoinFamily() {
       });
       if (error) throw error;
       await refresh();
-      router.replace('/(tabs)');
+      // Send them to "/" and let the router decide. They land in the waiting
+      // room, because joining puts you in the queue rather than in the family.
+      router.replace('/');
     } catch (e: any) {
       notify('Could not join', e?.message ?? 'Check the code and try again.');
     } finally {

@@ -27,6 +27,11 @@ do $$ begin
   create type appetite_t as enum ('small', 'normal', 'big');
 exception when duplicate_object then null; end $$;
 
+-- Somebody who typed the invite code but has not been let in yet.
+do $$ begin
+  create type member_status_t as enum ('pending', 'active');
+exception when duplicate_object then null; end $$;
+
 do $$ begin
   create type kosher_t as enum ('none', 'style', 'strict');
 exception when duplicate_object then null; end $$;
@@ -156,11 +161,20 @@ create table if not exists family_members (
   display_name text not null,
   role         role_t not null default 'member',
   appetite     appetite_t not null default 'normal',
+
+  -- Knowing the invite code gets you as far as the waiting room, no further.
+  -- Until an owner flips this to 'active' you can see nothing but your own row.
+  status       member_status_t not null default 'active',
+
   created_at   timestamptz not null default now(),
 
   -- Nobody can be in the same family twice.
   unique (family_id, user_id)
 );
+
+-- For databases created before the waiting room existed.
+alter table family_members
+  add column if not exists status member_status_t not null default 'active';
 
 create index if not exists family_members_family_idx on family_members(family_id);
 create index if not exists family_members_user_idx on family_members(user_id);
@@ -297,6 +311,15 @@ create index if not exists meal_suggestions_family_idx on meal_suggestions(famil
 -- themselves being blocked by the policies below. Without this, a policy on
 -- family_members that queries family_members would loop forever.
 
+-- Note the `status = 'active'` in all three. This is the whole waiting-room
+-- mechanism: a pending member fails is_family_member, so EVERY policy that
+-- calls it — meal plans, shopping list, other people's allergies — refuses
+-- them automatically. One condition, in one place, and the entire app is
+-- closed to somebody who has not been approved.
+--
+-- That is the payoff for putting the rules in the database. Had these checks
+-- been scattered across the screens, adding approval would have meant editing
+-- every screen and hoping none were missed.
 create or replace function is_family_member(fid uuid)
 returns boolean
 language sql
@@ -306,7 +329,7 @@ stable
 as $$
   select exists (
     select 1 from family_members
-    where family_id = fid and user_id = auth.uid()
+    where family_id = fid and user_id = auth.uid() and status = 'active'
   );
 $$;
 
@@ -318,6 +341,19 @@ set search_path = public
 stable
 as $$
   select role from family_members
+  where family_id = fid and user_id = auth.uid() and status = 'active'
+  limit 1;
+$$;
+
+/** Am I waiting to be let into this family? Used to show the waiting screen. */
+create or replace function my_status(fid uuid)
+returns member_status_t
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select status from family_members
   where family_id = fid and user_id = auth.uid()
   limit 1;
 $$;
@@ -341,7 +377,7 @@ set search_path = public
 stable
 as $$
   select id from family_members
-  where family_id = fid and user_id = auth.uid()
+  where family_id = fid and user_id = auth.uid() and status = 'active'
   limit 1;
 $$;
 
@@ -640,13 +676,55 @@ begin
     and lower(display_name) = lower(trim(p_display_name))
   limit 1;
 
+  -- Either way the new person lands as 'pending'. Knowing the code gets you
+  -- into the waiting room; an owner has to actually let you in. Until then
+  -- is_family_member() says no and the whole app stays shut to them.
   if existing.id is not null then
-    update family_members set user_id = auth.uid() where id = existing.id;
+    update family_members
+      set user_id = auth.uid(), status = 'pending'
+      where id = existing.id;
   else
-    insert into family_members (family_id, user_id, display_name, role)
-    values (fam.id, auth.uid(), p_display_name, 'member');
+    insert into family_members (family_id, user_id, display_name, role, status)
+    values (fam.id, auth.uid(), p_display_name, 'member', 'pending');
   end if;
 
   return fam;
+end;
+$$;
+
+
+-- ============================================================================
+-- 11. APPROVING SOMEBODY WHO ASKED TO JOIN
+-- ============================================================================
+-- Owners and co-owners only. Like create_family and join_family this is a
+-- database function rather than an update from the app, so the "am I allowed
+-- to do this?" check cannot be skipped by talking to the database directly.
+
+create or replace function decide_join_request(p_member_id uuid, p_approve boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target family_members;
+begin
+  select * into target from family_members where id = p_member_id;
+
+  if target.id is null then
+    raise exception 'No such join request';
+  end if;
+
+  if not can_approve(target.family_id) then
+    raise exception 'Only a parent can approve someone joining';
+  end if;
+
+  if p_approve then
+    update family_members set status = 'active' where id = p_member_id;
+  else
+    -- Turned down: remove the row so they can ask again later if it was a
+    -- mistake, rather than being stuck in limbo forever.
+    delete from family_members where id = p_member_id;
+  end if;
 end;
 $$;

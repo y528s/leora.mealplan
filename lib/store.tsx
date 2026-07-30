@@ -23,6 +23,12 @@ type Store = {
   /** My own row in the family — my name, my role, my appetite. */
   me: FamilyMember | null;
   role: Role | null;
+  /**
+   * True when I have asked to join a family but no owner has let me in yet.
+   * The database gives me nothing until then, so the app shows a waiting
+   * screen rather than an app full of empty pages.
+   */
+  awaitingApproval: boolean;
   /** Everyone in the family, including people who have not signed up yet. */
   members: FamilyMember[];
   /** Re-read everything from the database. */
@@ -58,6 +64,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     const myRow = myRows[0] as FamilyMember;
     setMe(myRow);
+
+    // Still in the waiting room. Do not bother asking for the family or the
+    // member list — the database would refuse both, and we would just be
+    // making pointless requests to be told no.
+    if (myRow.status === 'pending') {
+      setFamily(null);
+      setMembers([]);
+      return;
+    }
 
     // Grab the family and the full member list at the same time instead of
     // waiting for one then the other. Promise.all runs them together.
@@ -126,6 +141,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       family,
       me,
       role: me?.role ?? null,
+      awaitingApproval: me?.status === 'pending',
       members,
       refresh,
       signOut,
